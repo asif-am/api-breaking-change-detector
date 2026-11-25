@@ -122,9 +122,10 @@ placeholder is rejected — then run:
 npm run seed
 ```
 
-Creates the demo account with the sample project and one saved comparison. The demo password is not stored in
-this repository: it is read from `DEMO_PASSWORD` and is also kept in the local, gitignored
-`DEMO-CREDENTIALS.local.md` in your working copy.
+Creates the demo account (`demo@example.com`) with the sample project and one saved comparison. The password is
+whatever you set in `DEMO_PASSWORD`; nothing is generated and nothing is stored in this repository. Because
+`server/.env` is gitignored, that file is the only place the demo password exists locally, so use the same value
+to sign in. Pick a password you will remember when you create the file.
 
 ### Regenerate the rule catalogue
 
