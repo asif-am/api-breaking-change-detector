@@ -1,10 +1,5 @@
 # API Breaking Change Detector
 
-Software Engineering Lab (CSMC502) project · Department of Computer Science and Engineering, Tezpur University.
-
-**Submitted by:** Asif Ahmad (CSM25044), Birdao Swargiary (CSM25038), Raj Kumar Dutta (CSM25048)
-**Reference document:** Software Requirements Specification for the API Breaking Change Detector.
-
 The application compares two OpenAPI 3.x specifications, classifies every difference as **breaking**,
 **potentially breaking** or **non-breaking**, and produces a report with totals, old/new definitions,
 impact, migration guidance and a machine-readable CI verdict.
