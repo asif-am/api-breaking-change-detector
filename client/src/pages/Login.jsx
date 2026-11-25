@@ -66,6 +66,14 @@ export default function Login() {
               value={form.password}
               onChange={(event) => setForm({ ...form, password: event.target.value })}
             />
+            <div className="mt-2 text-right">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}

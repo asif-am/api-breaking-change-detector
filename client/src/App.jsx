@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import ComparisonPage from './pages/ComparisonPage.jsx';
 import Docs from './pages/Docs.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -12,6 +13,7 @@ import ProjectDetail from './pages/ProjectDetail.jsx';
 import Projects from './pages/Projects.jsx';
 import Register from './pages/Register.jsx';
 import ReportPage from './pages/ReportPage.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 export default function App() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
           <Route path="/report" element={<ReportPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/projects"
             element={

@@ -17,6 +17,17 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    // Password reset: only the SHA-256 hash of the single-use token is stored.
+    resetTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    resetTokenExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   { timestamps: true }
 );

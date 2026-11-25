@@ -222,8 +222,21 @@ Public:
 Session (Passport, httpOnly cookie):
 
 `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`,
+`POST /api/auth/forgot-password`, `POST /api/auth/reset-password`,
 `GET|POST /api/projects`, `GET|DELETE /api/projects/:id`, `POST /api/projects/:id/specs`,
 `GET|POST /api/projects/:id/comparisons`, `GET|DELETE /api/comparisons/:id`.
+
+### Password reset
+
+**Forgot password?** on the sign-in page starts a token-based reset: `POST /api/auth/forgot-password` issues a
+single-use token valid for 30 minutes, and `POST /api/auth/reset-password` consumes it and stores only its
+SHA-256 hash. The response is identical whether or not the email has an account, so the endpoint cannot be used
+to discover registered addresses.
+
+The project has no mail provider, so while `NODE_ENV` is not `production` the response also carries
+`data.resetToken` and `data.resetUrl` and the UI shows a **Continue to set a new password** button. In production
+that block is omitted and the link must be delivered by email — wire a provider in `forgotPassword` in
+`server/controllers/auth.js` (one function, no other changes).
 
 Example CI call:
 
@@ -281,6 +294,8 @@ Aligned with BR-01, BR-04 and BR-07:
 ## 10. Security notes
 
 - Passwords are hashed by passport-local-mongoose (salted hash per user); the session is an httpOnly, SameSite=Lax cookie stored in MongoDB.
+- Password-reset tokens are 256-bit random values stored only as SHA-256 hashes, expire after 30 minutes and are
+  cleared on use, so a reset link cannot be replayed. Reset responses do not reveal whether an account exists.
 - Every project, specification and comparison read is scoped to the owner id taken from the authenticated session.
 - Uploads are limited to 5 MB, accepted only as JSON, and held in memory (never written to disk).
 - JSON request bodies are limited to 8 MB; malformed and oversized bodies return 400/413 instead of 500.

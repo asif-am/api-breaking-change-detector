@@ -175,6 +175,21 @@ Upload a `.txt` file or a file larger than 5 MB to the specs endpoint.
 
 Expected: 400 with a multer/upload message; server keeps running.
 
+### MT-11 — password reset (development delivery)
+
+```bash
+curl -s -X POST $BASE/api/auth/forgot-password -H "Content-Type: application/json" \
+  -d '{"email":"demo@example.com"}'
+# copy data.resetToken from the response
+
+curl -s -X POST $BASE/api/auth/reset-password -H "Content-Type: application/json" \
+  -d '{"token":"<TOKEN>","password":"<new-password>"}'
+```
+
+Expected: the first call returns 200 with `data.resetToken` and `data.resetUrl` (`NODE_ENV` not `production`);
+the second returns 200 and the new password signs in. Replaying the same token returns 400, an unknown email
+returns the same generic message without `data`, and an expired token returns 400.
+
 ---
 
 ## 5. Manual UI test cases
@@ -192,6 +207,7 @@ Expected: 400 with a multer/upload message; server keeps running.
 | UI-09 | Run comparison from the project | Saved report opens, and appears in comparison history |
 | UI-10 | Open `/docs` | Requirement tables and the rule catalogue render (catalogue needs the API running) |
 | UI-11 | Resize to a narrow viewport | Tables scroll horizontally; layout remains usable |
+| UI-12 | Sign-in → **Forgot password?** → enter the demo email → **Continue to set a new password** → set it → sign in | Reset page accepts the link once, the new password signs in, the old one is rejected |
 
 ---
 

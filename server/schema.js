@@ -14,6 +14,15 @@ export const loginSchema = Joi.object({
   password,
 });
 
+export const forgotPasswordSchema = Joi.object({
+  email,
+});
+
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string().trim().length(64).hex().required(),
+  password,
+});
+
 export const projectSchema = Joi.object({
   name: Joi.string().trim().min(2).max(80).required(),
   description: Joi.string().trim().allow('').max(400).default(''),
