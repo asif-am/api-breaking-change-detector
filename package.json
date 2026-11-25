@@ -12,6 +12,7 @@
     "build": "npm --prefix client run build",
     "start": "npm --prefix server start",
     "test": "npm --prefix server test",
+    "seed": "npm --prefix server run seed",
     "docs:rules": "node server/scripts/exportRules.js"
   },
   "devDependencies": {

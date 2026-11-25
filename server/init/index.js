@@ -10,13 +10,16 @@ import Comparison from '../models/comparison.js';
 
 const DEMO_EMAIL = 'demo@example.com';
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
+const DEMO_PASSWORD_PLACEHOLDER = 'replace-with-a-demo-password';
 
 const baseline = JSON.parse(fs.readFileSync(new URL('../samples/baseline.json', import.meta.url), 'utf8'));
 const candidate = JSON.parse(fs.readFileSync(new URL('../samples/candidate.json', import.meta.url), 'utf8'));
 
 async function seed() {
-  if (!DEMO_PASSWORD) {
-    console.error('Set DEMO_PASSWORD in server/.env before running "npm run seed".');
+  if (!DEMO_PASSWORD || DEMO_PASSWORD === DEMO_PASSWORD_PLACEHOLDER) {
+    console.error(
+      'Set a real DEMO_PASSWORD in server/.env before running "npm run seed" (the template placeholder is not a password).'
+    );
     process.exit(1);
   }
 

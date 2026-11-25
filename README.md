@@ -75,7 +75,8 @@ npm run install:all
 cp server/.env.example server/.env
 ```
 
-Then replace `SESSION_SECRET` with a long random string. Variables:
+Then replace `SESSION_SECRET` with a long random string, and set `DEMO_PASSWORD` if you intend to run the seed.
+Variables:
 
 | Variable | Purpose |
 | --- | --- |
@@ -114,12 +115,15 @@ Runs the engine acceptance tests (`node --test`) covering AC-01 → AC-12, inclu
 
 ### Seed the demo account
 
+Set `DEMO_PASSWORD` in `server/.env` to the password you want the demo account to have — the template
+placeholder is rejected — then run:
+
 ```bash
 npm run seed
 ```
 
 Creates the demo account with the sample project and one saved comparison. The demo password is not stored in
-this repository; it is read from `DEMO_PASSWORD` in `server/.env` and is also kept in the local, gitignored
+this repository: it is read from `DEMO_PASSWORD` and is also kept in the local, gitignored
 `DEMO-CREDENTIALS.local.md` in your working copy.
 
 ### Regenerate the rule catalogue
