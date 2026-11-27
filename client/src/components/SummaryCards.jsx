@@ -1,56 +1,48 @@
-import { severityStyles } from '../utils/ui.js';
+const FIGURES = [
+  { key: 'total', label: 'Changes', tone: 'text-ink' },
+  { key: 'breaking', label: 'Breaking', tone: 'text-rust' },
+  { key: 'potentiallyBreaking', label: 'Potentially breaking', tone: 'text-ochre' },
+  { key: 'nonBreaking', label: 'Non-breaking', tone: 'text-moss' },
+];
 
-const CARDS = [
-  {
-    key: 'total',
-    label: 'Total changes',
-    accent: 'border-slate-200',
-    valueClass: 'text-slate-900',
-    hint: 'Everything detected between the two versions',
-  },
-  {
-    key: 'breaking',
-    label: 'Breaking',
-    accent: 'border-rose-200 bg-rose-50/40',
-    valueClass: 'text-rose-600',
-    hint: 'Existing consumers can fail',
-  },
-  {
-    key: 'potentiallyBreaking',
-    label: 'Potentially breaking',
-    accent: 'border-amber-200 bg-amber-50/40',
-    valueClass: 'text-amber-600',
-    hint: 'Behaviour changes worth reviewing',
-  },
-  {
-    key: 'nonBreaking',
-    label: 'Non-breaking',
-    accent: 'border-emerald-200 bg-emerald-50/40',
-    valueClass: 'text-emerald-600',
-    hint: 'Compatible additions and relaxations',
-  },
+const BAR = [
+  { key: 'breaking', className: 'bg-rust' },
+  { key: 'potentiallyBreaking', className: 'bg-ochre' },
+  { key: 'nonBreaking', className: 'bg-moss' },
 ];
 
 export default function SummaryCards({ summary }) {
+  const total = summary.total || 0;
+  const severities = Object.entries(summary.bySeverity || {});
+
   return (
-    <section aria-label="Summary statistics">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {CARDS.map((card) => (
-          <div key={card.key} className={`card border p-4 ${card.accent}`}>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
-            <p className={`mt-1 text-3xl font-bold tabular-nums ${card.valueClass}`}>{summary[card.key]}</p>
-            <p className="mt-1 text-xs text-slate-500">{card.hint}</p>
+    <section className="sheet" aria-label="Summary of changes">
+      <dl className="grid grid-cols-2 sm:grid-cols-4 sm:divide-x sm:divide-line">
+        {FIGURES.map((figure) => (
+          <div key={figure.key} className="px-4 py-4 sm:px-5">
+            <dt className="eyebrow">{figure.label}</dt>
+            <dd className={`mt-1.5 text-[28px] font-medium leading-none tabular-nums ${figure.tone}`}>
+              {summary[figure.key]}
+            </dd>
           </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Severity</span>
-        {Object.entries(summary.bySeverity || {}).map(([severity, count]) => (
-          <span key={severity} className={`chip capitalize ${severityStyles[severity] || 'bg-slate-100 text-slate-600'}`}>
-            {severity}: {count}
-          </span>
-        ))}
+      <div className="border-t border-line px-4 py-3.5 sm:px-5">
+        <div className="flex h-1.5 overflow-hidden rounded-sm bg-sunken">
+          {BAR.map((segment) => (
+            <span
+              key={segment.key}
+              className={segment.className}
+              style={{ width: `${total ? (summary[segment.key] / total) * 100 : 0}%` }}
+            />
+          ))}
+        </div>
+        {severities.length > 0 ? (
+          <p className="mt-2.5 font-mono text-[11px] text-muted">
+            severity · {severities.map(([name, count]) => `${name} ${count}`).join(' · ')}
+          </p>
+        ) : null}
       </div>
     </section>
   );

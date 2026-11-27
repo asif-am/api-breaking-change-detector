@@ -3,14 +3,15 @@ import toast from 'react-hot-toast';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const navLinkClass = ({ isActive }) =>
-  `rounded-lg px-2 py-2 text-xs font-medium transition sm:px-3 sm:text-sm ${
-    isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
-  }`;
+const LINKS = [
+  ['/', 'Compare', true],
+  ['/projects', 'Projects'],
+  ['/docs', 'Docs'],
+];
 
-const mobileNavLinkClass = ({ isActive }) =>
-  `block rounded-lg px-3 py-2 text-sm font-medium transition ${
-    isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
+const linkClass = ({ isActive }) =>
+  `rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+    isActive ? 'bg-sunken font-medium text-ink' : 'text-graphite hover:text-ink'
   }`;
 
 export default function Navbar() {
@@ -18,9 +19,7 @@ export default function Navbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
+  useEffect(() => setMenuOpen(false), [location.pathname]);
 
   async function handleLogout() {
     setMenuOpen(false);
@@ -32,124 +31,112 @@ export default function Navbar() {
     }
   }
 
-  return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="flex h-16 items-center justify-between gap-2">
-          <Link to="/" className="flex shrink-0 items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-600 text-xs font-bold text-white">
-              AB
-            </span>
-            <span className="hidden leading-tight sm:block">
-              <span className="block text-sm font-bold text-slate-900">API Breaking Change Detector</span>
-              <span className="block text-[11px] text-slate-500">OpenAPI compatibility analysis</span>
-            </span>
-          </Link>
+  const closeMenu = () => setMenuOpen(false);
 
-          <nav className="hidden items-center gap-0.5 md:flex sm:gap-1">
-            <NavLink to="/" end className={navLinkClass}>
-              Compare
+  return (
+    <header className="sticky top-0 z-30 border-b border-line bg-paper/95 backdrop-blur">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-[13px] focus:text-paper"
+      >
+        Skip to content
+      </a>
+
+      <div className="wrap flex h-14 items-center justify-between gap-4">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5">
+          <span
+            className="grid h-6 w-6 shrink-0 place-items-center rounded bg-ink font-mono text-[12px] leading-none text-paper"
+            aria-hidden="true"
+          >
+            Δ
+          </span>
+          <span className="truncate text-[13px] font-medium tracking-[-0.005em]">API Breaking Change Detector</span>
+        </Link>
+
+        <nav className="hidden items-center gap-0.5 md:flex" aria-label="Main">
+          {LINKS.map(([to, label, end]) => (
+            <NavLink key={to} to={to} end={end} className={linkClass}>
+              {label}
             </NavLink>
-            <NavLink to="/projects" className={navLinkClass}>
-              Projects
-            </NavLink>
-            <NavLink to="/docs" className={navLinkClass}>
-              Docs
-            </NavLink>
+          ))}
+        </nav>
+
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          {user ? (
+            <>
+              <span className="max-w-[9rem] truncate text-[13px] text-graphite">{user.name}</span>
+              <button type="button" className="btn btn-secondary" onClick={handleLogout}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn-quiet text-[13px]">
+                Sign in
+              </Link>
+              <Link to="/register" className="btn btn-primary">
+                Create account
+              </Link>
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="grid h-9 w-9 place-items-center rounded-md border border-line text-graphite transition-colors hover:text-ink md:hidden"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" aria-hidden="true">
+            <path strokeLinecap="round" d={menuOpen ? 'M5 5l10 10M15 5L5 15' : 'M3 6h14M3 10h14M3 14h14'} />
+          </svg>
+        </button>
+      </div>
+
+      {menuOpen ? (
+        <div id="mobile-navigation" className="wrap border-t border-line pb-4 pt-3 md:hidden">
+          <nav className="flex flex-col" aria-label="Main">
+            {LINKS.map(([to, label, end]) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `rounded-md px-2 py-2 text-sm transition-colors ${
+                    isActive ? 'bg-sunken font-medium text-ink' : 'text-graphite hover:text-ink'
+                  }`
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
           </nav>
 
-          <div className="hidden shrink-0 items-center gap-1.5 md:flex">
+          <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3">
             {user ? (
               <>
-                <span className="hidden max-w-[8rem] truncate text-sm text-slate-600 lg:block">{user.name}</span>
-                <button type="button" className="btn-ghost" onClick={handleLogout}>
+                <p className="px-2 text-[12px] text-muted">
+                  Signed in as <span className="text-graphite">{user.name}</span>
+                </p>
+                <button type="button" className="btn btn-secondary" onClick={handleLogout}>
                   Sign out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-ghost">
+                <Link to="/login" className="btn btn-secondary" onClick={closeMenu}>
                   Sign in
                 </Link>
-                <Link to="/register" className="btn-primary">
+                <Link to="/register" className="btn btn-primary" onClick={closeMenu}>
                   Create account
                 </Link>
               </>
             )}
           </div>
-
-          <button
-            type="button"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-100 md:hidden"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            {menuOpen ? (
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-6 w-6"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-6 w-6"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            )}
-          </button>
         </div>
-
-        {menuOpen ? (
-          <div id="mobile-navigation" className="border-t border-slate-100 pb-3 pt-2 md:hidden">
-            <nav className="flex flex-col gap-0.5">
-              <NavLink to="/" end className={mobileNavLinkClass}>
-                Compare
-              </NavLink>
-              <NavLink to="/projects" className={mobileNavLinkClass}>
-                Projects
-              </NavLink>
-              <NavLink to="/docs" className={mobileNavLinkClass}>
-                Docs
-              </NavLink>
-            </nav>
-
-            <div className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-3">
-              {user ? (
-                <>
-                  <p className="px-3 text-xs text-slate-500">
-                    Signed in as <span className="font-semibold text-slate-800">{user.name}</span>
-                  </p>
-                  <button type="button" className="btn-secondary w-full" onClick={handleLogout}>
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link to="/login" className="btn-secondary w-full">
-                    Sign in
-                  </Link>
-                  <Link to="/register" className="btn-primary w-full">
-                    Create account
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        ) : null}
-      </div>
+      ) : null}
     </header>
   );
 }

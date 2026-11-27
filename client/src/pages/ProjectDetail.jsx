@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorIssues, errorMessage } from '../api/client.js';
-import Spinner from '../components/Spinner.jsx';
 import { VerdictBadge } from '../components/Badges.jsx';
+import Spinner from '../components/Spinner.jsx';
 import { formatBytes, formatDate } from '../utils/ui.js';
 
-function SpecSlot({ role, title, description, specification, onUpload, busy }) {
+function SpecSlot({ role, title, specification, onUpload, busy }) {
   const [file, setFile] = useState(null);
 
   async function submit() {
@@ -19,57 +19,58 @@ function SpecSlot({ role, title, description, specification, onUpload, busy }) {
   }
 
   return (
-    <section className="card p-4">
-      <div className="flex items-start justify-between gap-2">
+    <section className="sheet p-4">
+      <header className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-          <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+          <h2 className="h3">{title}</h2>
+          <p className="mt-0.5 text-[12px] leading-5 text-muted">
+            {role === 'baseline' ? 'Reference version used as the comparison base.' : 'Proposed version to evaluate before release.'}
+          </p>
         </div>
-        <span
-          className={`chip ${specification ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}
-        >
+        <span className={`tag ${specification ? 'tag-compatible' : ''}`}>
           {specification ? 'uploaded' : 'missing'}
         </span>
-      </div>
+      </header>
 
       {specification ? (
-        <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-xs">
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3">
           <div className="col-span-2">
-            <dt className="text-slate-500">File</dt>
-            <dd className="truncate font-mono text-slate-800">{specification.name}</dd>
+            <dt className="eyebrow">File</dt>
+            <dd className="mt-0.5 truncate font-mono text-[11px] text-graphite">{specification.name}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Version</dt>
-            <dd className="text-slate-800">v{specification.version}</dd>
+            <dt className="eyebrow">Version</dt>
+            <dd className="mt-0.5 text-[13px] text-ink">v{specification.version}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">OpenAPI</dt>
-            <dd className="text-slate-800">{specification.openapi}</dd>
+            <dt className="eyebrow">OpenAPI</dt>
+            <dd className="mt-0.5 text-[13px] text-ink">{specification.openapi}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Operations</dt>
-            <dd className="text-slate-800">{specification.operationCount}</dd>
+            <dt className="eyebrow">Operations</dt>
+            <dd className="mt-0.5 text-[13px] tabular-nums text-ink">{specification.operationCount}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Size</dt>
-            <dd className="text-slate-800">{formatBytes(specification.sizeBytes)}</dd>
+            <dt className="eyebrow">Size</dt>
+            <dd className="mt-0.5 text-[13px] text-ink">{formatBytes(specification.sizeBytes)}</dd>
           </div>
         </dl>
       ) : (
-        <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
+        <p className="mt-4 border-t border-line pt-3 text-[12px] leading-5 text-muted">
           No specification uploaded for this role yet.
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
         <input
           type="file"
           accept=".json,application/json"
-          className="block w-full max-w-full text-xs text-slate-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+          aria-label={`${title} file`}
+          className="block w-full min-w-0 max-w-full text-[12px] text-graphite file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-line file:bg-surface file:px-2.5 file:py-1.5 file:font-mono file:text-[11px] file:text-graphite hover:file:bg-sunken"
           onChange={(event) => setFile(event.target.files?.[0] || null)}
         />
-        <button type="button" className="btn-secondary" onClick={submit} disabled={busy}>
-          {busy ? 'Uploading…' : specification ? 'Replace file' : 'Upload file'}
+        <button type="button" className="btn btn-secondary" onClick={submit} disabled={busy || !file}>
+          {busy ? 'Uploading…' : specification ? 'Replace' : 'Upload'}
         </button>
       </div>
     </section>
@@ -86,8 +87,8 @@ export default function ProjectDetail() {
 
   async function load() {
     try {
-      const response = await api.get(`/projects/${id}`);
-      setData(response.data.data);
+      const { data: response } = await api.get(`/projects/${id}`);
+      setData(response.data);
     } catch (error) {
       toast.error(errorMessage(error));
       setData(null);
@@ -109,16 +110,13 @@ export default function ProjectDetail() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('role', role);
-
       await api.post(`/projects/${id}/specs`, formData);
       toast.success(`${role === 'baseline' ? 'Baseline' : 'Candidate'} specification stored.`);
       await load();
     } catch (error) {
-      const issues = errorIssues(error);
       toast.error(errorMessage(error));
-      if (issues.length > 0) {
-        toast(issues.map((issue) => issue.message).join(' · '), { duration: 6000 });
-      }
+      const issues = errorIssues(error);
+      if (issues.length > 0) toast(issues.map((issue) => issue.message).join(' · '), { duration: 6000 });
     } finally {
       setBusyRole('');
     }
@@ -127,12 +125,11 @@ export default function ProjectDetail() {
   async function runComparison() {
     setRunning(true);
     try {
-      const response = await api.post(`/projects/${id}/comparisons`, {
+      const { data: response } = await api.post(`/projects/${id}/comparisons`, {
         options: { includeNonBreaking: true },
       });
-      const comparisonId = response.data.data.comparison.id;
-      toast.success('Comparison completed and stored in history.');
-      navigate(`/comparisons/${comparisonId}`);
+      toast.success('Comparison stored in history.');
+      navigate(`/comparisons/${response.data.comparison.id}`);
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -140,15 +137,17 @@ export default function ProjectDetail() {
     }
   }
 
-  if (loading) return <Spinner label="Loading project…" />;
+  if (loading) return <Spinner label="loading project" />;
 
   if (!data) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
-        <div className="card p-8 text-center">
-          <h1 className="text-lg font-bold text-slate-900">Project not available</h1>
-          <p className="mt-2 text-sm text-slate-600">It may have been deleted, or it belongs to another account.</p>
-          <Link to="/projects" className="btn-primary mt-4">
+      <div className="wrap py-16">
+        <div className="sheet mx-auto max-w-[30rem] p-8 text-center">
+          <h1 className="h3">Project not available</h1>
+          <p className="mt-1.5 text-[13px] leading-6 text-graphite">
+            It may have been deleted, or it belongs to another account.
+          </p>
+          <Link to="/projects" className="btn btn-primary mt-4">
             Back to projects
           </Link>
         </div>
@@ -160,97 +159,86 @@ export default function ProjectDetail() {
   const ready = Boolean(baseline && candidate);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/projects" className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
-            ← All projects
+    <div className="wrap py-10">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
+        <div className="min-w-0">
+          <Link to="/projects" className="font-mono text-[11px] text-muted hover:text-ink">
+            ← projects
           </Link>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{project.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            {project.description || 'No description provided.'}
+          <h1 className="page-title mt-2 break-words">{project.name}</h1>
+          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-6 text-graphite">
+            {project.description || 'No description'}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">Created {formatDate(project.createdAt)}</p>
+          <p className="mt-1 font-mono text-[11px] text-muted">created {formatDate(project.createdAt)}</p>
         </div>
-        <button type="button" className="btn-primary" onClick={runComparison} disabled={!ready || running}>
+        <button type="button" className="btn btn-primary" onClick={runComparison} disabled={!ready || running}>
           {running ? 'Running…' : 'Run comparison'}
         </button>
-      </div>
+      </header>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <SpecSlot
-          role="baseline"
-          title="Baseline specification"
-          description="Reference version used as the comparison base."
-          specification={baseline}
-          onUpload={uploadSpecification}
-          busy={busyRole === 'baseline'}
-        />
-        <SpecSlot
-          role="candidate"
-          title="Candidate specification"
-          description="Proposed version to evaluate before release."
-          specification={candidate}
-          onUpload={uploadSpecification}
-          busy={busyRole === 'candidate'}
-        />
+        <SpecSlot role="baseline" title="Baseline" specification={baseline} onUpload={uploadSpecification} busy={busyRole === 'baseline'} />
+        <SpecSlot role="candidate" title="Candidate" specification={candidate} onUpload={uploadSpecification} busy={busyRole === 'candidate'} />
       </div>
 
       {!ready ? (
-        <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+        <p className="mt-3 rounded-lg border border-ochre/30 bg-ochre-soft px-3 py-2.5 text-[12px] leading-5 text-ochre">
           Upload both specifications to enable the comparison. Files must be OpenAPI 3.0.x or 3.1.x JSON documents.
         </p>
       ) : null}
 
-      <section className="card mt-6 overflow-hidden">
-        <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+      <section className="mt-8">
+        <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="section-title text-base">Comparison history</h2>
-            <p className="text-xs text-slate-500">Saved reports with a reproducible digest for every run.</p>
+            <h2 className="h2">Comparison history</h2>
+            <p className="mt-1 text-[13px] text-graphite">Saved reports with a reproducible digest for every run.</p>
           </div>
-          <span className="chip bg-slate-100 text-slate-600">{comparisons.length} saved</span>
-        </header>
+          <span className="tag">{comparisons.length} saved</span>
+        </div>
 
         {comparisons.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-slate-500">
+          <p className="mt-4 rounded-xl border border-dashed border-line px-4 py-8 text-center text-[13px] text-muted">
             No comparisons stored yet. Upload both specifications and run a comparison.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Run</th>
-                  <th className="px-4 py-2 font-medium">Versions</th>
-                  <th className="px-4 py-2 font-medium">Changes</th>
-                  <th className="px-4 py-2 font-medium">Verdict</th>
-                  <th className="px-4 py-2 font-medium">Digest</th>
-                  <th className="px-4 py-2" />
+          <div className="sheet mt-4 overflow-x-auto">
+            <table className="w-full min-w-[44rem] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="table-head">Run</th>
+                  <th className="table-head">Versions</th>
+                  <th className="table-head">Changes</th>
+                  <th className="table-head">Verdict</th>
+                  <th className="table-head">Digest</th>
+                  <th className="table-head text-right">Report</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-line">
                 {comparisons.map((comparison) => (
-                  <tr key={comparison.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2 text-xs text-slate-500">{formatDate(comparison.createdAt)}</td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
+                  <tr key={comparison.id} className="transition-colors hover:bg-sunken/50">
+                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-muted">
+                      {formatDate(comparison.createdAt)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-graphite">
                       v{comparison.baselineSpec.version} → v{comparison.candidateSpec.version}
                     </td>
-                    <td className="px-4 py-2 text-xs text-slate-700">
-                      {comparison.summary.total} total ·{' '}
-                      <span className="text-rose-600">{comparison.summary.breaking} breaking</span>
+                    <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">
+                      {comparison.summary.total}
+                      <span className="text-muted"> · </span>
+                      <span className="text-rust">{comparison.summary.breaking} breaking</span>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2.5">
                       <VerdictBadge status={comparison.summary.breaking > 0 ? 'FAIL' : 'PASS'} />
                     </td>
-                    <td className="px-4 py-2 font-mono text-[11px] text-slate-500">
+                    <td className="px-4 py-2.5 font-mono text-[11px] text-muted">
                       {comparison.resultDigest.slice(0, 10)}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className="px-4 py-2.5 text-right">
                       <Link
                         to={`/comparisons/${comparison.id}`}
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                        className="text-[13px] font-medium text-prussian hover:text-ink"
                       >
-                        View report
+                        View
                       </Link>
                     </td>
                   </tr>

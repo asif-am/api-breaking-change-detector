@@ -18,8 +18,8 @@ export default function ComparisonPage() {
 
     api
       .get(`/comparisons/${id}`)
-      .then((response) => {
-        if (active) setData(response.data.data);
+      .then(({ data: response }) => {
+        if (active) setData(response.data);
       })
       .catch((error) => {
         toast.error(errorMessage(error));
@@ -48,17 +48,17 @@ export default function ComparisonPage() {
     }
   }
 
-  if (loading) return <Spinner label="Loading saved report…" />;
+  if (loading) return <Spinner label="loading saved report" />;
 
   if (!data) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
-        <div className="card p-8 text-center">
-          <h1 className="text-lg font-bold text-slate-900">Report not available</h1>
-          <p className="mt-2 text-sm text-slate-600">
+      <div className="wrap py-16">
+        <div className="sheet mx-auto max-w-[30rem] p-8 text-center">
+          <h1 className="h3">Report not available</h1>
+          <p className="mt-1.5 text-[13px] leading-6 text-graphite">
             The comparison may have been deleted, or it belongs to another account.
           </p>
-          <Link to="/projects" className="btn-primary mt-4">
+          <Link to="/projects" className="btn btn-primary mt-4">
             Back to projects
           </Link>
         </div>
@@ -69,28 +69,29 @@ export default function ComparisonPage() {
   const { report, comparison } = data;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+    <div className="wrap py-10">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div>
           <Link
             to={`/projects/${comparison.project}`}
-            className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            className="font-mono text-[11px] text-muted hover:text-ink"
           >
-            ← Back to project
+            ← project
           </Link>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Saved comparison</h1>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {comparison.baselineSpec.name} (v{comparison.baselineSpec.version}) →{' '}
-            {comparison.candidateSpec.name} (v{comparison.candidateSpec.version}) · saved{' '}
-            {formatDate(comparison.createdAt)}
+          <h1 className="page-title mt-2">Saved comparison</h1>
+          <p className="mt-1 font-mono text-[11px] leading-5 text-muted">
+            {comparison.baselineSpec.name} v{comparison.baselineSpec.version} → {comparison.candidateSpec.name} v
+            {comparison.candidateSpec.version} · saved {formatDate(comparison.createdAt)}
           </p>
         </div>
-        <button type="button" className="btn-danger" onClick={handleDelete} disabled={deleting}>
+        <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={deleting}>
           {deleting ? 'Deleting…' : 'Delete comparison'}
         </button>
-      </div>
+      </header>
 
-      <ReportView report={report} />
+      <div className="mt-5">
+        <ReportView report={report} />
+      </div>
     </div>
   );
 }

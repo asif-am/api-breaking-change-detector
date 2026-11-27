@@ -1,69 +1,94 @@
-import { classificationDots, prettyValue } from '../utils/ui.js';
-import { ClassificationBadge, MethodChip, SeverityBadge } from './Badges.jsx';
+import { classificationMeta, prettyValue } from '../utils/ui.js';
+import { ClassificationTag, MethodTag, SeverityTag } from './Badges.jsx';
 
-function ValueBlock({ label, value, tone }) {
-  const tones = {
-    baseline: 'border-rose-100 bg-rose-50/50',
-    candidate: 'border-emerald-100 bg-emerald-50/50',
-  };
+function Definition({ label, value, tone }) {
+  const surface = tone === 'baseline' ? 'border-rust/20 bg-rust-soft/60' : 'border-moss/20 bg-moss-soft/60';
 
   return (
-    <div className={`rounded-xl border ${tones[tone]} p-3`}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-700">
+    <div className={`rounded-lg border p-3 ${surface}`}>
+      <p className="eyebrow">{label}</p>
+      <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5 text-graphite">
         {prettyValue(value)}
       </pre>
     </div>
   );
 }
 
-export default function ChangeCard({ change }) {
+function Chevron() {
   return (
-    <details className="card group overflow-hidden">
-      <summary className="flex cursor-pointer list-none items-start gap-3 p-4 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-        <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${classificationDots[change.classification]}`} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900">{change.title}</span>
-            <ClassificationBadge classification={change.classification} />
-            <SeverityBadge severity={change.severity} />
-            <span className="chip bg-slate-100 font-mono text-slate-600">{change.ruleId}</span>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <MethodChip method={change.method} />
-            <span className="break-all font-mono text-xs text-slate-500">
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      className="h-3.5 w-3.5 shrink-0 text-muted transition-transform group-open:rotate-180"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
+    </svg>
+  );
+}
+
+export default function ChangeCard({ change }) {
+  const meta = classificationMeta[change.classification] || {};
+
+  return (
+    <details className="group">
+      <summary className="grid cursor-pointer list-none grid-cols-[1rem_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 transition-colors hover:bg-sunken/60">
+        <span className={`pt-0.5 font-mono text-sm leading-5 ${meta.text || 'text-graphite'}`} aria-hidden="true">
+          {meta.mark || '·'}
+        </span>
+
+        <div className="min-w-0">
+          <p className="text-sm leading-5 text-ink">{change.title}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-4 text-muted">
+            {change.method ? <span className="text-graphite">{change.method}</span> : null}
+            <span className="break-all">
               {change.path}
               {change.field ? ` · ${change.field}` : ''}
             </span>
-          </div>
+            <span className="text-muted" aria-hidden="true">
+              ·
+            </span>
+            <span>{change.ruleId}</span>
+          </p>
         </div>
-        <span className="mt-1 text-slate-500 transition group-open:rotate-180">▾</span>
+
+        <div className="flex items-start gap-2 pt-0.5">
+          <span className="hidden sm:block">
+            <ClassificationTag classification={change.classification} />
+          </span>
+          <span className="hidden md:block">
+            <SeverityTag severity={change.severity} />
+          </span>
+          <Chevron />
+        </div>
       </summary>
 
-      <div className="space-y-4 border-t border-slate-100 p-4">
-        <p className="text-sm leading-relaxed text-slate-700">{change.explanation}</p>
+      <div className="border-t border-line bg-surface px-4 py-4 sm:pl-[3.25rem]">
+        <p className="max-w-[80ch] text-[13px] leading-6 text-graphite">{change.explanation}</p>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <ValueBlock label="Baseline definition" value={change.oldValue} tone="baseline" />
-          <ValueBlock label="Candidate definition" value={change.newValue} tone="candidate" />
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Definition label="Baseline" value={change.oldValue} tone="baseline" />
+          <Definition label="Candidate" value={change.newValue} tone="candidate" />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl bg-amber-50 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">Potential impact</p>
-            <p className="mt-1 text-sm leading-relaxed text-amber-900">{change.impact}</p>
+        <dl className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="border-t border-line pt-3">
+            <dt className="eyebrow">Impact</dt>
+            <dd className="mt-1 text-[13px] leading-6 text-graphite">{change.impact}</dd>
           </div>
-          <div className="rounded-xl bg-indigo-50 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">Migration guidance</p>
-            <p className="mt-1 text-sm leading-relaxed text-indigo-900">{change.migration}</p>
+          <div className="border-t border-line pt-3">
+            <dt className="eyebrow">Migration</dt>
+            <dd className="mt-1 text-[13px] leading-6 text-graphite">{change.migration}</dd>
           </div>
-        </div>
+        </dl>
 
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-slate-500">
-          <span>Change {change.id}</span>
-          <span>Element: {change.element}</span>
-          <span>Category: {change.category}</span>
-          <span className="break-all font-mono">{change.pointer || '(document root)'}</span>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-line pt-3 font-mono text-[11px] text-muted">
+          <span>change {change.id}</span>
+          <span>element {change.element}</span>
+          <span>category {change.category}</span>
+          <span className="break-all">{change.pointer || '(document root)'}</span>
         </div>
       </div>
     </details>

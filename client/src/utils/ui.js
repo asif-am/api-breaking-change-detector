@@ -1,27 +1,37 @@
-export const classificationStyles = {
-  breaking: 'bg-rose-100 text-rose-700',
-  'potentially-breaking': 'bg-amber-100 text-amber-800',
-  'non-breaking': 'bg-emerald-100 text-emerald-700',
+/** One place where a classification gets its label, margin mark and colour. */
+export const classificationMeta = {
+  breaking: { label: 'Breaking', mark: '−', tag: 'tag tag-breaking', text: 'text-rust', dot: 'bg-rust' },
+  'potentially-breaking': {
+    label: 'Potentially breaking',
+    short: 'Potential',
+    mark: '±',
+    tag: 'tag tag-potential',
+    text: 'text-ochre',
+    dot: 'bg-ochre',
+  },
+  'non-breaking': {
+    label: 'Non-breaking',
+    short: 'Compatible',
+    mark: '+',
+    tag: 'tag tag-compatible',
+    text: 'text-moss',
+    dot: 'bg-moss',
+  },
 };
 
-export const classificationDots = {
-  breaking: 'bg-rose-500',
-  'potentially-breaking': 'bg-amber-500',
-  'non-breaking': 'bg-emerald-500',
-};
+export const classificationFilters = [
+  { value: 'all', label: 'All' },
+  { value: 'breaking', label: 'Breaking' },
+  { value: 'potentially-breaking', label: 'Potential' },
+  { value: 'non-breaking', label: 'Compatible' },
+];
 
-export const classificationLabels = {
-  breaking: 'Breaking',
-  'potentially-breaking': 'Potentially breaking',
-  'non-breaking': 'Non-breaking',
-};
-
-export const severityStyles = {
-  critical: 'bg-rose-600 text-white',
-  high: 'bg-orange-100 text-orange-700',
-  medium: 'bg-amber-100 text-amber-800',
-  low: 'bg-sky-100 text-sky-700',
-  info: 'bg-slate-100 text-slate-600',
+export const severityText = {
+  critical: 'text-rust',
+  high: 'text-rust',
+  medium: 'text-ochre',
+  low: 'text-prussian',
+  info: 'text-graphite',
 };
 
 export function formatDate(value) {
@@ -46,19 +56,16 @@ export function formatBytes(bytes) {
 
 export function prettyValue(value) {
   if (value === null || value === undefined) return '(not set)';
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return String(value);
-    }
+  if (typeof value !== 'object') return String(value);
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
   }
-  return String(value);
 }
 
 export function downloadJson(data, filename) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
@@ -68,8 +75,8 @@ export function downloadJson(data, filename) {
   URL.revokeObjectURL(url);
 }
 
-export function reportFilename(report, prefix = 'api-compatibility-report') {
+export function reportFilename(report) {
   const baseline = report?.meta?.baseline?.version || 'baseline';
   const candidate = report?.meta?.candidate?.version || 'candidate';
-  return `${prefix}-${baseline}-to-${candidate}.json`.replace(/\s+/g, '-');
+  return `api-compatibility-report-${baseline}-to-${candidate}.json`.replace(/\s+/g, '-');
 }

@@ -8,52 +8,144 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-800 antialiased;
+    @apply bg-paper font-sans text-ink antialiased;
   }
 
   ::selection {
-    @apply bg-indigo-200 text-indigo-950;
+    background: #dbe4ef;
+    color: #1b1a16;
+  }
+
+  :focus-visible {
+    outline: 2px solid #1f4a7c;
+    outline-offset: 2px;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  code {
+    @apply font-mono text-[0.92em];
   }
 }
 
 @layer components {
-  .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  .wrap {
+    @apply mx-auto w-full max-w-[78rem] px-5 sm:px-8;
+  }
+
+  /* A printed sheet: one surface, one hairline, one radius. */
+  .sheet {
+    @apply rounded-xl border border-line bg-surface;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] leading-4 text-muted;
+  }
+
+  .h1 {
+    @apply text-[32px] font-medium leading-[1.08] tracking-[-0.025em] sm:text-[42px];
+  }
+
+  .h2 {
+    @apply text-[21px] font-medium leading-tight tracking-[-0.015em] sm:text-[25px];
+  }
+
+  .h3 {
+    @apply text-[15px] font-medium leading-6 tracking-[-0.005em] text-ink;
+  }
+
+  .page-title {
+    @apply text-[24px] font-medium leading-tight tracking-[-0.015em];
+  }
+
+  .lead {
+    @apply text-[15px] leading-7 text-graphite;
+  }
+
+  .note {
+    @apply text-[13px] leading-6 text-graphite;
   }
 
   .label {
-    @apply mb-1.5 block text-sm font-medium text-slate-700;
+    @apply mb-2 block text-[13px] font-medium leading-5 text-graphite;
   }
 
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100;
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-prussian;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply bg-ink text-paper hover:bg-graphite;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply border border-line bg-surface text-ink hover:border-graphite/40 hover:bg-sunken;
   }
 
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60;
+  .btn-quiet {
+    @apply px-2 py-2 text-graphite hover:text-ink;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply border border-rust/30 text-rust hover:bg-rust-soft;
   }
 
-  .chip {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  .link {
+    @apply text-prussian underline-offset-4 hover:text-ink hover:underline;
   }
 
-  .section-title {
-    @apply text-lg font-semibold tracking-tight text-slate-900;
+  .tag {
+    @apply inline-flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] leading-4 text-graphite;
+  }
+
+  .tag-breaking {
+    @apply border-rust/30 bg-rust-soft text-rust;
+  }
+
+  .tag-potential {
+    @apply border-ochre/30 bg-ochre-soft text-ochre;
+  }
+
+  .tag-compatible {
+    @apply border-moss/30 bg-moss-soft text-moss;
+  }
+
+  .tag-ink {
+    @apply border-ink bg-ink text-paper;
+  }
+
+  .table-head {
+    @apply whitespace-nowrap px-4 py-2 text-left font-mono text-[11px] font-normal text-muted;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.enter {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .enter {
+    animation: none;
   }
 }

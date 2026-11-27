@@ -15,12 +15,18 @@ import Register from './pages/Register.jsx';
 import ReportPage from './pages/ReportPage.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 
+const PROTECTED_ROUTES = [
+  ['/projects', Projects],
+  ['/projects/:id', ProjectDetail],
+  ['/comparisons/:id', ComparisonPage],
+];
+
 export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
       <ScrollToTop />
       <Navbar />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/report" element={<ReportPage />} />
@@ -28,30 +34,17 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <Projects />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/projects/:id"
-            element={
-              <ProtectedRoute>
-                <ProjectDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/comparisons/:id"
-            element={
-              <ProtectedRoute>
-                <ComparisonPage />
-              </ProtectedRoute>
-            }
-          />
+          {PROTECTED_ROUTES.map(([path, Page]) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <ProtectedRoute>
+                  <Page />
+                </ProtectedRoute>
+              }
+            />
+          ))}
           <Route path="/docs" element={<Docs />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,47 +1,28 @@
-import {
-  classificationLabels,
-  classificationStyles,
-  severityStyles,
-} from '../utils/ui.js';
+import { classificationMeta, severityText } from '../utils/ui.js';
 
-export function ClassificationBadge({ classification }) {
-  return (
-    <span className={`chip ${classificationStyles[classification] || 'bg-slate-100 text-slate-600'}`}>
-      {classificationLabels[classification] || classification}
-    </span>
-  );
+export function ClassificationTag({ classification }) {
+  const meta = classificationMeta[classification];
+  return <span className={meta ? meta.tag : 'tag'}>{meta ? meta.label : classification}</span>;
 }
 
-export function SeverityBadge({ severity }) {
-  return (
-    <span className={`chip uppercase tracking-wide ${severityStyles[severity] || 'bg-slate-100 text-slate-600'}`}>
-      {severity}
-    </span>
-  );
+export function SeverityTag({ severity }) {
+  return <span className={`tag ${severityText[severity] || 'text-graphite'}`}>{severity}</span>;
 }
 
-export function MethodChip({ method }) {
+export function MethodTag({ method }) {
   if (!method) return null;
-  const key = method.toUpperCase();
-  const palette = {
-    GET: 'bg-sky-100 text-sky-700',
-    POST: 'bg-emerald-100 text-emerald-700',
-    PUT: 'bg-amber-100 text-amber-800',
-    PATCH: 'bg-violet-100 text-violet-700',
-    DELETE: 'bg-rose-100 text-rose-700',
-  };
-  return <span className={`chip font-mono ${palette[key] || 'bg-slate-100 text-slate-600'}`}>{key}</span>;
+  return <span className="tag w-14 justify-center">{method.toUpperCase()}</span>;
 }
 
 export function VerdictBadge({ status }) {
-  const isFail = status === 'FAIL';
+  const failed = status === 'FAIL';
   return (
     <span
-      className={`chip gap-1.5 px-3 py-1 text-sm font-semibold ${
-        isFail ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+      className={`inline-flex items-center gap-2 rounded border px-2 py-1 font-mono text-xs ${
+        failed ? 'border-rust/30 bg-rust-soft text-rust' : 'border-moss/30 bg-moss-soft text-moss'
       }`}
     >
-      <span className={`h-2 w-2 rounded-full ${isFail ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${failed ? 'bg-rust' : 'bg-moss'}`} aria-hidden="true" />
       {status}
     </span>
   );
