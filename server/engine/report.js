@@ -6,16 +6,11 @@
  * Everything except `meta.run` is derived purely from the inputs, and
  * `meta.deterministic.resultDigest` proves it (AC-12).
  */
-import crypto from 'node:crypto';
-import { CLASSIFICATIONS, SEVERITIES } from './rules.js';
-import { stableStringify, uniqueSorted } from './util.js';
+import { SEVERITIES } from './rules.js';
+import { sha256, stableStringify, uniqueSorted } from './util.js';
 
 export const TOOL_NAME = 'API Breaking Change Detector';
 export const TOOL_VERSION = '1.0.0';
-
-function sha256(value) {
-  return crypto.createHash('sha256').update(stableStringify(value)).digest('hex');
-}
 
 function countBy(items, keyFn) {
   const counts = {};
@@ -103,6 +98,14 @@ function buildEndpointSummary(changes, baselineModel, candidateModel) {
   };
 }
 
+/** The four totals persisted alongside a saved comparison. */
+export const storedSummary = (report) => ({
+  total: report.summary.total,
+  breaking: report.summary.breaking,
+  potentiallyBreaking: report.summary.potentiallyBreaking,
+  nonBreaking: report.summary.nonBreaking,
+});
+
 /**
  * @param {object} input
  * @param {object} input.baselineModel normalized baseline
@@ -114,28 +117,19 @@ function buildEndpointSummary(changes, baselineModel, candidateModel) {
  */
 export function buildReport({ baselineModel, candidateModel, changes, options, startedAt, inputDigests }) {
   const counts = countBy(changes, (change) => change.classification);
+  const severityCounts = countBy(changes, (change) => change.severity);
   const summary = {
     total: changes.length,
     breaking: counts.breaking || 0,
     potentiallyBreaking: counts['potentially-breaking'] || 0,
     nonBreaking: counts['non-breaking'] || 0,
-    bySeverity: SEVERITIES.reduce((acc, severity) => {
-      acc[severity] = changes.filter((change) => change.severity === severity).length;
-      return acc;
-    }, {}),
+    bySeverity: Object.fromEntries(SEVERITIES.map((severity) => [severity, severityCounts[severity] || 0])),
     byElement: countBy(changes, (change) => change.element),
     byCategory: buildCategoryBreakdown(changes),
   };
 
   const warnings = [...(baselineModel.meta.warnings || []), ...(candidateModel.meta.warnings || [])];
-  const uniqueWarnings = [];
-  const seenWarnings = new Set();
-  for (const warning of warnings) {
-    const key = `${warning.code}:${warning.path}`;
-    if (seenWarnings.has(key)) continue;
-    seenWarnings.add(key);
-    uniqueWarnings.push(warning);
-  }
+  const uniqueWarnings = [...new Map(warnings.map((item) => [`${item.code}:${item.path}`, item])).values()];
 
   const resultDigest = sha256({
     inputs: inputDigests,

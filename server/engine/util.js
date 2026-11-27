@@ -2,13 +2,10 @@
  * Small shared helpers used across the comparison engine.
  * Keeping them here avoids duplicated logic in the comparators (NFR-05).
  */
+import crypto from 'node:crypto';
 
 export function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-export function isPlainObject(value) {
-  return isObject(value) && !Array.isArray(value);
 }
 
 /**
@@ -26,25 +23,17 @@ export function stableStringify(value, depth = 0) {
   return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key], depth + 1)}`).join(',')}}`;
 }
 
-export function deepEqual(a, b) {
-  return stableStringify(a) === stableStringify(b);
-}
+export const deepEqual = (a, b) => stableStringify(a) === stableStringify(b);
+
+/** Digest of the canonical form; used for the reproducible report fingerprint. */
+export const sha256 = (value) =>
+  crypto.createHash('sha256').update(stableStringify(value)).digest('hex');
 
 /** Human readable, length capped representation used in reports. */
 export function formatValue(value, maxLength = 320) {
   if (value === undefined) return '(not present)';
   if (value === null) return 'null';
-  if (typeof value === 'string') {
-    const text = value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
-    return text;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  let text;
-  try {
-    text = stableStringify(value);
-  } catch {
-    text = String(value);
-  }
+  const text = typeof value === 'object' ? stableStringify(value) : String(value);
   return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
 }
 
@@ -62,8 +51,8 @@ export function methodRank(method = '') {
 
 /** Replaces templated path segments so /pets/{id} and /pets/{petId} match. */
 export function canonicalPath(path = '') {
-  const withoutTrailing = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
-  return withoutTrailing.replace(/\{[^/{}]+\}/g, '{}');
+  const trimmed = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+  return trimmed.replace(/\{[^/{}]+\}/g, '{}');
 }
 
 export function isJsonMediaType(mediaType = '') {
@@ -71,9 +60,7 @@ export function isJsonMediaType(mediaType = '') {
   return value.includes('json') || value === '*/*' || value === 'application/*';
 }
 
-export function uniqueSorted(values) {
-  return [...new Set(values)].sort();
-}
+export const uniqueSorted = (values) => [...new Set(values)].sort();
 
 export function toArray(value) {
   if (value === undefined || value === null) return [];

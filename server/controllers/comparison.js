@@ -7,21 +7,16 @@ import {
 } from '../engine/index.js';
 import { databaseState } from '../config/database.js';
 import { store, getPersistenceMode } from '../data/store.js';
+import { parseOptions } from '../schema.js';
 
-const samples = {
-  baseline: JSON.parse(fs.readFileSync(new URL('../samples/baseline.json', import.meta.url), 'utf8')),
-  candidate: JSON.parse(fs.readFileSync(new URL('../samples/candidate.json', import.meta.url), 'utf8')),
-};
+const readSample = (name) =>
+  JSON.parse(fs.readFileSync(new URL(`../samples/${name}.json`, import.meta.url), 'utf8'));
 
-function parseOptions(raw) {
-  if (!raw) return {};
-  if (typeof raw === 'object') return raw;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
+const samples = { baseline: readSample('baseline'), candidate: readSample('candidate') };
+
+/** Every analysis endpoint answers with the same envelope. */
+const sendReport = (res, report) =>
+  res.json({ success: true, data: report, ci: report.ci, verdict: report.verdict });
 
 /* ------------------------------ public API ------------------------------- */
 
@@ -67,12 +62,7 @@ export function compare(req, res, next) {
     const { baseline, candidate, options } = req.body;
     const report = compareSpecifications({ baseline, candidate, options: parseOptions(options) });
 
-    return res.json({
-      success: true,
-      data: report,
-      ci: report.ci,
-      verdict: report.verdict,
-    });
+    return sendReport(res, report);
   } catch (error) {
     return next(error);
   }
@@ -97,7 +87,7 @@ export function compareFiles(req, res, next) {
       options: parseOptions(req.body?.options),
     });
 
-    return res.json({ success: true, data: report, ci: report.ci, verdict: report.verdict });
+    return sendReport(res, report);
   } catch (error) {
     return next(error);
   }

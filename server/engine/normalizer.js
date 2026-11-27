@@ -15,10 +15,7 @@ import { HTTP_METHODS } from './parser.js';
 import { dereference } from './refResolver.js';
 import { canonicalPath, isObject } from './util.js';
 
-function normalizeSchema(schema) {
-  if (!isObject(schema)) return {};
-  return schema;
-}
+const normalizeSchema = (schema) => (isObject(schema) ? schema : {});
 
 function normalizeMediaContent(content) {
   if (!isObject(content)) return {};
@@ -108,10 +105,7 @@ export function normalizeSpecification(parsed) {
   for (const [path, pathItem] of Object.entries(paths)) {
     if (!isObject(pathItem)) continue;
 
-    const sharedParameters = mergeParameters(
-      Array.isArray(pathItem.parameters) ? pathItem.parameters : [],
-      []
-    );
+    const sharedParameters = Array.isArray(pathItem.parameters) ? pathItem.parameters : [];
 
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];

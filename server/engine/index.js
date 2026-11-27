@@ -6,20 +6,15 @@
  * Each stage lives in its own module so it can be replaced (new formats,
  * custom rule packs) without touching the others.
  */
-import crypto from 'node:crypto';
 import { parseSpecification, SpecificationError } from './parser.js';
 import { normalizeSpecification } from './normalizer.js';
 import { compareOperations } from './comparators/operations.js';
 import { decorateChanges, assignIds } from './explain.js';
 import { buildReport, TOOL_VERSION } from './report.js';
 import { CLASSIFICATIONS, RULES, SEVERITIES, ruleSummary } from './rules.js';
-import { stableStringify } from './util.js';
+import { sha256 } from './util.js';
 
 export const ENGINE_VERSION = TOOL_VERSION;
-
-function digest(value) {
-  return crypto.createHash('sha256').update(stableStringify(value)).digest('hex');
-}
 
 function normalizeOptions(options = {}) {
   const list = (value) =>
@@ -73,8 +68,8 @@ export function compareSpecifications({ baseline, candidate, options = {} }) {
     options: settings,
     startedAt,
     inputDigests: {
-      baseline: digest({ operations: baselineModel.operations, meta: baselineModel.meta.title }),
-      candidate: digest({ operations: candidateModel.operations, meta: candidateModel.meta.title }),
+      baseline: sha256({ operations: baselineModel.operations, meta: baselineModel.meta.title }),
+      candidate: sha256({ operations: candidateModel.operations, meta: candidateModel.meta.title }),
     },
   });
 

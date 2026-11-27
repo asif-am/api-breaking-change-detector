@@ -22,32 +22,16 @@ function summarizeParameter(parameter) {
   };
 }
 
-function groupByCanonicalPath(operations) {
+function groupBy(operations, keyOf) {
   const groups = new Map();
-  for (const operation of Object.values(operations)) {
-    const list = groups.get(operation.canonicalPath) || [];
-    list.push(operation);
-    groups.set(operation.canonicalPath, list);
-  }
-  for (const list of groups.values()) {
-    list.sort((a, b) => a.method.localeCompare(b.method));
+  for (const operation of operations) {
+    const key = keyOf(operation);
+    groups.set(key, [...(groups.get(key) || []), operation]);
   }
   return groups;
 }
 
-function methodsOf(operations) {
-  return [...new Set(operations.map((operation) => operation.method))].sort();
-}
-
-function groupByRawPath(operations) {
-  const byPath = new Map();
-  for (const operation of operations) {
-    const list = byPath.get(operation.path) || [];
-    list.push(operation);
-    byPath.set(operation.path, list);
-  }
-  return [...byPath.entries()].sort(([a], [b]) => a.localeCompare(b));
-}
+const methodsOf = (operations) => uniqueSorted(operations.map((operation) => operation.method));
 
 function placeholders(path) {
   return [...String(path).matchAll(/\{([^}]+)\}/g)].map((match) => match[1]);
@@ -64,19 +48,12 @@ function compareParameters(ctx, baselineOperation, candidateOperation, renamedPa
 
   // A renamed path placeholder is reported once as path-template-renamed; the
   // parameter is then compared under its new name instead of as remove + add.
-  const renamedPathMap = new Map();
-  for (const pair of renamedPathParameters) {
-    const candidateParameter = candidateParameters.find(
-      (parameter) => parameter.in === 'path' && parameter.name === pair.to
-    );
-    if (candidateParameter) renamedPathMap.set(pair.from, candidateParameter);
-  }
+  const renamedPathMap = new Map(renamedPathParameters.map((pair) => [pair.from, pair.to]));
 
   for (const oldParameter of baselineParameters) {
     const key = `${oldParameter.in}:${oldParameter.name}`;
-    const newParameter =
-      candidateByKey.get(key) ||
-      (oldParameter.in === 'path' ? renamedPathMap.get(oldParameter.name) : undefined);
+    const renamedTo = oldParameter.in === 'path' ? renamedPathMap.get(oldParameter.name) : undefined;
+    const newParameter = candidateByKey.get(key) || (renamedTo ? candidateByKey.get(`path:${renamedTo}`) : undefined);
     const pointer = `parameters/${oldParameter.in}/${newParameter?.name || oldParameter.name}`;
     const field = `${oldParameter.in}.${newParameter?.name || oldParameter.name}`;
 
@@ -107,20 +84,12 @@ function compareParameters(ctx, baselineOperation, candidateOperation, renamedPa
 
     handledCandidateKeys.add(`${newParameter.in}:${newParameter.name}`);
 
-    if (!oldParameter.required && newParameter.required) {
+    if (oldParameter.required !== newParameter.required) {
       ctx.emit({
-        code: 'parameter-required-added',
+        code: newParameter.required ? 'parameter-required-added' : 'parameter-required-removed',
         location: location(base.path, base.method, pointer, field),
-        oldValue: 'required: false',
-        newValue: 'required: true',
-      });
-    }
-    if (oldParameter.required && !newParameter.required) {
-      ctx.emit({
-        code: 'parameter-required-removed',
-        location: location(base.path, base.method, pointer, field),
-        oldValue: 'required: true',
-        newValue: 'required: false',
+        oldValue: `required: ${oldParameter.required}`,
+        newValue: `required: ${newParameter.required}`,
       });
     }
     if (
@@ -160,8 +129,31 @@ function compareParameters(ctx, baselineOperation, candidateOperation, renamedPa
 
 function compareMediaTypes(ctx, oldContent, newContent, context) {
   const { path, method, pointerBase, direction, status } = context;
-  const oldTypes = Object.keys(oldContent).sort();
-  const newTypes = Object.keys(newContent).sort();
+  const oldTypes = Object.keys(oldContent);
+  const newTypes = Object.keys(newContent);
+
+  for (const mediaType of newTypes.sort()) {
+    if (!oldTypes.includes(mediaType)) {
+      ctx.emit({
+        code: `${direction}-content-type-added`,
+        location: location(path, method, `${pointerBase}/content/${mediaType}`, mediaType),
+        status,
+        media: mediaType,
+        oldValue: '(not accepted)',
+        newValue: mediaType,
+      });
+      continue;
+    }
+    // FR-14: schema comparison is JSON-oriented.
+    if (!isJsonMediaType(mediaType)) continue;
+    compareSchema(
+      ctx,
+      oldContent[mediaType]?.schema,
+      newContent[mediaType]?.schema,
+      location(path, method, `${pointerBase}/content/${mediaType}/schema`, `${status ? `status ${status}` : 'requestBody'} · ${mediaType}`),
+      direction
+    );
+  }
 
   for (const mediaType of oldTypes) {
     if (newTypes.includes(mediaType)) continue;
@@ -173,30 +165,6 @@ function compareMediaTypes(ctx, oldContent, newContent, context) {
       oldValue: mediaType,
       newValue: '(not accepted)',
     });
-  }
-
-  for (const mediaType of newTypes) {
-    if (oldTypes.includes(mediaType)) continue;
-    ctx.emit({
-      code: `${direction}-content-type-added`,
-      location: location(path, method, `${pointerBase}/content/${mediaType}`, mediaType),
-      status,
-      media: mediaType,
-      oldValue: '(not accepted)',
-      newValue: mediaType,
-    });
-  }
-
-  for (const mediaType of newTypes) {
-    if (!oldTypes.includes(mediaType)) continue;
-    if (!isJsonMediaType(mediaType)) continue; // FR-14: schema comparison is JSON-oriented
-    compareSchema(
-      ctx,
-      oldContent[mediaType]?.schema,
-      newContent[mediaType]?.schema,
-      location(path, method, `${pointerBase}/content/${mediaType}/schema`, `${status ? `status ${status}` : 'requestBody'} · ${mediaType}`),
-      direction
-    );
   }
 }
 
@@ -294,8 +262,8 @@ function compareOperation(ctx, baselineOperation, candidateOperation, renamedPat
  * Compares two normalized API models and emits semantic change events.
  */
 export function compareOperations(ctx, baselineModel, candidateModel) {
-  const baselineGroups = groupByCanonicalPath(baselineModel.operations);
-  const candidateGroups = groupByCanonicalPath(candidateModel.operations);
+  const baselineGroups = groupBy(Object.values(baselineModel.operations), (operation) => operation.canonicalPath);
+  const candidateGroups = groupBy(Object.values(candidateModel.operations), (operation) => operation.canonicalPath);
 
   const canonicalPaths = uniqueSorted([...baselineGroups.keys(), ...candidateGroups.keys()]);
 
@@ -304,7 +272,7 @@ export function compareOperations(ctx, baselineModel, candidateModel) {
     const candidateOperations = candidateGroups.get(canonical) || [];
 
     if (baselineOperations.length > 0 && candidateOperations.length === 0) {
-      for (const [path, operations] of groupByRawPath(baselineOperations)) {
+      for (const [path, operations] of groupBy(baselineOperations, (operation) => operation.path)) {
         ctx.emit({
           code: 'endpoint-removed',
           location: location(path, methodsOf(operations).join(', '), ''),
@@ -319,7 +287,7 @@ export function compareOperations(ctx, baselineModel, candidateModel) {
     }
 
     if (baselineOperations.length === 0 && candidateOperations.length > 0) {
-      for (const [path, operations] of groupByRawPath(candidateOperations)) {
+      for (const [path, operations] of groupBy(candidateOperations, (operation) => operation.path)) {
         ctx.emit({
           code: 'endpoint-added',
           location: location(path, methodsOf(operations).join(', '), ''),

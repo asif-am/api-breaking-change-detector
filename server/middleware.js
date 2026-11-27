@@ -2,39 +2,35 @@ import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import { SpecificationError } from './engine/index.js';
 
+/** Every failure uses the same JSON envelope. */
+const fail = (res, status, message, extra = {}) => res.status(status).json({ success: false, message, ...extra });
+
 /* ---------------------------------- auth --------------------------------- */
 
 /** Guard for private routes: no session → 401. */
 export function isLoggedIn(req, res, next) {
   if (req.isAuthenticated && req.isAuthenticated()) return next();
-  return res.status(401).json({ success: false, message: 'Authentication required.' });
+  return fail(res, 401, 'Authentication required.');
 }
 
 /* ------------------------------ rate limits ------------------------------ */
 
-/** Limits credential stuffing on the sign-in and sign-up endpoints. */
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many authentication attempts. Please wait a few minutes and try again.',
-  },
-});
+const limiter = (windowMs, limit, message) =>
+  rateLimit({ windowMs, limit, standardHeaders: 'draft-7', legacyHeaders: false, message: { success: false, message } });
+
+/** Limits credential stuffing on the sign-in, sign-up and reset endpoints. */
+export const authLimiter = limiter(
+  15 * 60 * 1000,
+  20,
+  'Too many authentication attempts. Please wait a few minutes and try again.'
+);
 
 /** Limits abusive comparison traffic on the public analysis endpoints. */
-export const compareLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 30,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: 'Too many comparison requests. Please wait a minute and try again.',
-  },
-});
+export const compareLimiter = limiter(
+  60 * 1000,
+  30,
+  'Too many comparison requests. Please wait a minute and try again.'
+);
 
 /* ------------------------------ validation ------------------------------- */
 
@@ -48,15 +44,12 @@ export function validate(schema) {
     });
 
     if (error) {
-      return res.status(422).json({
-        success: false,
-        message: 'Please correct the highlighted fields.',
-        issues: error.details.map((detail) => ({
-          code: detail.type,
-          path: detail.path.join('.'),
-          message: detail.message.replace(/"/g, ''),
-        })),
-      });
+      const issues = error.details.map((detail) => ({
+        code: detail.type,
+        path: detail.path.join('.'),
+        message: detail.message.replace(/"/g, ''),
+      }));
+      return fail(res, 422, 'Please correct the highlighted fields.', { issues });
     }
 
     req.body = value;
@@ -66,17 +59,15 @@ export function validate(schema) {
 
 /* --------------------------------- upload -------------------------------- */
 
-/** Spec uploads are held in memory (max 5 MB) and never written to disk. */
-const storage = multer.memoryStorage();
-
 function isJsonFile(file) {
   const name = (file.originalname || '').toLowerCase();
   const type = (file.mimetype || '').toLowerCase();
   return name.endsWith('.json') || type === 'application/json' || type === 'text/json' || type === '';
 }
 
+/** Spec uploads are held in memory (max 5 MB) and never written to disk. */
 export const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 2 },
   fileFilter(req, file, callback) {
     if (!isJsonFile(file)) {
@@ -109,10 +100,7 @@ export function securityHeaders(req, res, next) {
 /* -------------------------------- errors --------------------------------- */
 
 export function notFound(req, res) {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
+  return fail(res, 404, `Route not found: ${req.method} ${req.originalUrl}`);
 }
 
 /** Central error handler so every failure returns the same JSON envelope. */
@@ -120,26 +108,11 @@ export function errorHandler(error, req, res, next) {
   if (res.headersSent) return next(error);
 
   // Body-parser failures are client errors, not server failures.
-  if (error?.type === 'entity.parse.failed') {
-    return res.status(400).json({
-      success: false,
-      message: 'The request body is not valid JSON.',
-    });
-  }
-
-  if (error?.type === 'entity.too.large') {
-    return res.status(413).json({
-      success: false,
-      message: 'The request body exceeds the 8 MB limit.',
-    });
-  }
+  if (error?.type === 'entity.parse.failed') return fail(res, 400, 'The request body is not valid JSON.');
+  if (error?.type === 'entity.too.large') return fail(res, 413, 'The request body exceeds the 8 MB limit.');
 
   if (error instanceof SpecificationError) {
-    return res.status(error.statusCode || 422).json({
-      success: false,
-      message: error.message,
-      issues: error.issues,
-    });
+    return fail(res, error.statusCode || 422, error.message, { issues: error.issues });
   }
 
   if (error?.name === 'MulterError') {
@@ -147,39 +120,24 @@ export function errorHandler(error, req, res, next) {
       error.code === 'LIMIT_FILE_SIZE'
         ? 'The uploaded file is larger than the 5 MB limit.'
         : error.message || 'The upload could not be processed.';
-    return res.status(400).json({ success: false, message });
+    return fail(res, 400, message);
   }
 
-  if (error?.name === 'UserExistsError') {
-    return res.status(409).json({
-      success: false,
-      message: 'An account with this email already exists.',
-    });
+  if (error?.name === 'UserExistsError' || error?.code === 11000) {
+    return fail(res, 409, 'An account with this email already exists.');
   }
 
   if (error?.name === 'ValidationError') {
-    return res.status(422).json({
-      success: false,
-      message: 'The submitted data failed validation.',
-      issues: Object.values(error.errors || {}).map((item) => ({
-        code: 'validation-error',
-        path: item.path,
-        message: item.message,
-      })),
-    });
+    const issues = Object.values(error.errors || {}).map((item) => ({
+      code: 'validation-error',
+      path: item.path,
+      message: item.message,
+    }));
+    return fail(res, 422, 'The submitted data failed validation.', { issues });
   }
 
-  if (error?.name === 'CastError') {
-    return res.status(400).json({ success: false, message: 'The supplied identifier is not valid.' });
-  }
-
-  if (error?.code === 11000) {
-    return res.status(409).json({
-      success: false,
-      message: 'An account with this email already exists.',
-    });
-  }
+  if (error?.name === 'CastError') return fail(res, 400, 'The supplied identifier is not valid.');
 
   console.error('[error]', error);
-  return res.status(500).json({ success: false, message: 'Internal server error.' });
+  return fail(res, 500, 'Internal server error.');
 }

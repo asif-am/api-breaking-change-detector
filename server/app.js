@@ -37,13 +37,13 @@ if (connection.connected) {
 // Config
 app.set('trust proxy', 1);
 
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+const allowedOrigins = new Set([
+  (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, ''),
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:5000',
   'http://127.0.0.1:5000',
-];
+]);
 
 app.use(securityHeaders);
 
@@ -54,7 +54,7 @@ app.use(
   cors({
     credentials: true,
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
       if (process.env.NODE_ENV !== 'production' && isLocalDevOrigin(origin)) return callback(null, true);
       return callback(null, false);
     },

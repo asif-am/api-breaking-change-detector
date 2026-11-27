@@ -194,23 +194,16 @@ function compareConstraints(ctx, oldSchema, newSchema, location, direction) {
     handleEffect(boundEffect(bound, oldValue, newValue), key, oldValue, newValue);
   }
 
-  if (oldSchema.pattern !== newSchema.pattern) {
-    if (oldSchema.pattern === undefined) {
-      handleEffect('narrowed', 'pattern', oldSchema.pattern, newSchema.pattern);
-    } else if (newSchema.pattern === undefined) {
-      handleEffect('widened', 'pattern', oldSchema.pattern, newSchema.pattern);
-    } else {
-      handleEffect(direction === 'request' ? 'narrowed' : 'widened', 'pattern', oldSchema.pattern, newSchema.pattern);
-    }
-  }
+  // A keyword that appears restricts the value; a dropped one relaxes it.
+  const keywordEffect = (oldValue, newValue) => {
+    if (oldValue === undefined) return 'narrowed';
+    if (newValue === undefined) return 'widened';
+    return direction === 'request' ? 'narrowed' : 'widened';
+  };
 
-  if (oldSchema.multipleOf !== newSchema.multipleOf) {
-    if (oldSchema.multipleOf === undefined) {
-      handleEffect('narrowed', 'multipleOf', oldSchema.multipleOf, newSchema.multipleOf);
-    } else if (newSchema.multipleOf === undefined) {
-      handleEffect('widened', 'multipleOf', oldSchema.multipleOf, newSchema.multipleOf);
-    } else {
-      handleEffect(direction === 'request' ? 'narrowed' : 'widened', 'multipleOf', oldSchema.multipleOf, newSchema.multipleOf);
+  for (const key of ['pattern', 'multipleOf']) {
+    if (oldSchema[key] !== newSchema[key]) {
+      handleEffect(keywordEffect(oldSchema[key], newSchema[key]), key, oldSchema[key], newSchema[key]);
     }
   }
 

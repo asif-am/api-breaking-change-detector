@@ -48,3 +48,17 @@ export const compareSchema = Joi.object({
 export const projectComparisonSchema = Joi.object({
   options: Joi.alternatives().try(Joi.object(), Joi.string().allow('')).default({}),
 });
+
+/**
+ * Comparison options arrive as an object from JSON requests and as a JSON string
+ * from multipart uploads. Anything unparseable falls back to the defaults.
+ */
+export function parseOptions(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}

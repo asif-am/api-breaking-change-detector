@@ -1,17 +1,16 @@
 import { compareSpecifications, validateSpecification } from '../engine/index.js';
+import { storedSummary } from '../engine/report.js';
 import { store } from '../data/store.js';
+import { parseOptions } from '../schema.js';
 
 // MongoDB documents are capped at 16 MB; keep a safety margin below that.
 const MAX_STORED_REPORT_BYTES = 12 * 1024 * 1024;
 
-function parseOptions(raw) {
-  if (!raw) return {};
-  if (typeof raw === 'object') return raw;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+/** Resolves :id for the signed-in owner, or sends the shared 404 response. */
+async function ownedProject(req, res) {
+  const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
+  if (!project) res.status(404).json({ success: false, message: 'Project not found.' });
+  return project;
 }
 
 /** GET /api/projects */
@@ -44,10 +43,8 @@ export async function createProject(req, res, next) {
 /** GET /api/projects/:id */
 export async function getProject(req, res, next) {
   try {
-    const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
+    const project = await ownedProject(req, res);
+    if (!project) return;
 
     const [specifications, comparisons] = await Promise.all([
       store.specifications.listByProject(project.id),
@@ -63,10 +60,8 @@ export async function getProject(req, res, next) {
 /** DELETE /api/projects/:id */
 export async function deleteProject(req, res, next) {
   try {
-    const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
+    const project = await ownedProject(req, res);
+    if (!project) return;
     await store.projects.remove(project.id);
     return res.json({ success: true, message: 'Project deleted.' });
   } catch (error) {
@@ -77,10 +72,8 @@ export async function deleteProject(req, res, next) {
 /** POST /api/projects/:id/specs (multipart: file, role) */
 export async function uploadSpecification(req, res, next) {
   try {
-    const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
+    const project = await ownedProject(req, res);
+    if (!project) return;
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Attach the specification as a .json file.' });
@@ -133,10 +126,8 @@ export async function uploadSpecification(req, res, next) {
 /** POST /api/projects/:id/comparisons */
 export async function runProjectComparison(req, res, next) {
   try {
-    const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
+    const project = await ownedProject(req, res);
+    if (!project) return;
 
     const [baseline, candidate] = await Promise.all([
       store.specifications.findByRole(project.id, 'baseline'),
@@ -170,12 +161,7 @@ export async function runProjectComparison(req, res, next) {
       baselineSpec: { specId: baseline.id, name: baseline.name, version: baseline.version },
       candidateSpec: { specId: candidate.id, name: candidate.name, version: candidate.version },
       options: report.meta.options,
-      summary: {
-        total: report.summary.total,
-        breaking: report.summary.breaking,
-        potentiallyBreaking: report.summary.potentiallyBreaking,
-        nonBreaking: report.summary.nonBreaking,
-      },
+      summary: storedSummary(report),
       resultDigest: report.meta.deterministic.resultDigest,
       report,
     });
@@ -189,10 +175,8 @@ export async function runProjectComparison(req, res, next) {
 /** GET /api/projects/:id/comparisons */
 export async function listProjectComparisons(req, res, next) {
   try {
-    const project = await store.projects.findByIdForOwner(req.params.id, req.user.id);
-    if (!project) {
-      return res.status(404).json({ success: false, message: 'Project not found.' });
-    }
+    const project = await ownedProject(req, res);
+    if (!project) return;
     const comparisons = await store.comparisons.listByProject(project.id);
     return res.json({ success: true, data: { comparisons } });
   } catch (error) {

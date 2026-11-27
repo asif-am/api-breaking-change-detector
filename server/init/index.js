@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import mongoose from 'mongoose';
 import { compareSpecifications, validateSpecification } from '../engine/index.js';
+import { storedSummary } from '../engine/report.js';
 import { connectDatabase } from '../config/database.js';
 import User from '../models/user.js';
 import Project from '../models/project.js';
@@ -48,45 +49,33 @@ async function seed() {
     description: 'Sample project created by the seed script for the comparison walkthrough.',
   });
 
-  const baselineValidation = validateSpecification(baseline, 'Baseline specification');
-  const candidateValidation = validateSpecification(candidate, 'Candidate specification');
+  const validations = {
+    baseline: validateSpecification(baseline, 'Baseline specification'),
+    candidate: validateSpecification(candidate, 'Candidate specification'),
+  };
 
-  await Specification.create({
-    project: project._id,
-    role: 'baseline',
-    name: 'baseline.json',
-    version: baselineValidation.meta.version,
-    openapi: baselineValidation.meta.openapi,
-    operationCount: baselineValidation.operationCount,
-    sizeBytes: Buffer.byteLength(JSON.stringify(baseline)),
-    document: baseline,
-  });
-
-  await Specification.create({
-    project: project._id,
-    role: 'candidate',
-    name: 'candidate.json',
-    version: candidateValidation.meta.version,
-    openapi: candidateValidation.meta.openapi,
-    operationCount: candidateValidation.operationCount,
-    sizeBytes: Buffer.byteLength(JSON.stringify(candidate)),
-    document: candidate,
-  });
+  await Specification.insertMany(
+    Object.entries({ baseline, candidate }).map(([role, document]) => ({
+      project: project._id,
+      role,
+      name: `${role}.json`,
+      version: validations[role].meta.version,
+      openapi: validations[role].meta.openapi,
+      operationCount: validations[role].operationCount,
+      sizeBytes: Buffer.byteLength(JSON.stringify(document)),
+      document,
+    }))
+  );
 
   const report = compareSpecifications({ baseline, candidate });
 
   await Comparison.create({
     project: project._id,
     owner: user._id,
-    baselineSpec: { specId: '', name: 'baseline.json', version: baselineValidation.meta.version },
-    candidateSpec: { specId: '', name: 'candidate.json', version: candidateValidation.meta.version },
+    baselineSpec: { specId: '', name: 'baseline.json', version: validations.baseline.meta.version },
+    candidateSpec: { specId: '', name: 'candidate.json', version: validations.candidate.meta.version },
     options: report.meta.options,
-    summary: {
-      total: report.summary.total,
-      breaking: report.summary.breaking,
-      potentiallyBreaking: report.summary.potentiallyBreaking,
-      nonBreaking: report.summary.nonBreaking,
-    },
+    summary: storedSummary(report),
     resultDigest: report.meta.deterministic.resultDigest,
     report,
   });

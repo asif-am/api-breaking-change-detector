@@ -40,40 +40,46 @@ function nextId(prefix) {
   return `${prefix}${memory.sequence}`;
 }
 
-function plain(document) {
-  return document && typeof document.toObject === 'function' ? document.toObject() : document;
-}
+/** Mongoose documents are converted to plain objects before they leave the store. */
+const plain = (document) =>
+  document && typeof document.toObject === 'function' ? document.toObject() : document;
 
-function serialiseUser(document) {
-  const user = plain(document);
-  if (!user) return null;
-  return {
-    id: String(user._id ?? user.id),
+/** Mongo records expose _id, in-memory records expose id. */
+const idOf = (document) => String(document._id ?? document.id);
+
+const serialise = (document, build) => {
+  const value = plain(document);
+  return value ? build(value) : null;
+};
+
+const specReference = (reference) => ({
+  specId: String(reference?.specId || ''),
+  name: reference?.name || '',
+  version: reference?.version || '',
+});
+
+const serialiseUser = (document) =>
+  serialise(document, (user) => ({
+    id: idOf(user),
     name: user.name,
     email: user.email,
     password: user.password,
     createdAt: user.createdAt,
-  };
-}
+  }));
 
-function serialiseProject(document) {
-  const project = plain(document);
-  if (!project) return null;
-  return {
-    id: String(project._id ?? project.id),
+const serialiseProject = (document) =>
+  serialise(document, (project) => ({
+    id: idOf(project),
     owner: String(project.owner?._id ?? project.owner ?? ''),
     name: project.name,
     description: project.description || '',
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
-  };
-}
+  }));
 
-function serialiseSpecification(document, withDocument = true) {
-  const spec = plain(document);
-  if (!spec) return null;
-  const result = {
-    id: String(spec._id ?? spec.id),
+const serialiseSpecification = (document, withDocument = true) =>
+  serialise(document, (spec) => ({
+    id: idOf(spec),
     project: String(spec.project?._id ?? spec.project ?? ''),
     role: spec.role,
     name: spec.name,
@@ -83,39 +89,23 @@ function serialiseSpecification(document, withDocument = true) {
     sizeBytes: spec.sizeBytes || 0,
     createdAt: spec.createdAt,
     updatedAt: spec.updatedAt,
-  };
-  if (withDocument) result.document = spec.document;
-  return result;
-}
+    ...(withDocument ? { document: spec.document } : {}),
+  }));
 
-function serialiseComparison(document, withReport = true) {
-  const comparison = plain(document);
-  if (!comparison) return null;
-  const result = {
-    id: String(comparison._id ?? comparison.id),
+const serialiseComparison = (document, withReport = true) =>
+  serialise(document, (comparison) => ({
+    id: idOf(comparison),
     project: String(comparison.project?._id ?? comparison.project ?? ''),
-    baselineSpec: {
-      specId: String(comparison.baselineSpec?.specId || ''),
-      name: comparison.baselineSpec?.name || '',
-      version: comparison.baselineSpec?.version || '',
-    },
-    candidateSpec: {
-      specId: String(comparison.candidateSpec?.specId || ''),
-      name: comparison.candidateSpec?.name || '',
-      version: comparison.candidateSpec?.version || '',
-    },
+    baselineSpec: specReference(comparison.baselineSpec),
+    candidateSpec: specReference(comparison.candidateSpec),
     options: comparison.options || {},
     summary: comparison.summary || { total: 0, breaking: 0, potentiallyBreaking: 0, nonBreaking: 0 },
     resultDigest: comparison.resultDigest || '',
     createdAt: comparison.createdAt,
-  };
-  if (withReport) result.report = comparison.report;
-  return result;
-}
+    ...(withReport ? { report: comparison.report } : {}),
+  }));
 
-function isObjectId(value) {
-  return mongoose.isValidObjectId(value);
-}
+const isObjectId = (value) => mongoose.isValidObjectId(value);
 
 export const store = {
   users: {

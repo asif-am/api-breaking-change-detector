@@ -3,6 +3,7 @@ import passport from 'passport';
 import User from '../models/user.js';
 
 const publicUser = (user) => ({ id: user.id, name: user.name, email: user.email });
+const EMAIL_TAKEN = 'An account with this email already exists.';
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const RESET_RESPONSE_MESSAGE =
@@ -19,9 +20,7 @@ export async function register(req, res, next) {
     const { name, email, password } = req.body;
 
     const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
-    }
+    if (existing) return res.status(409).json({ success: false, message: EMAIL_TAKEN });
 
     const registered = await User.register(new User({ name, email }), password);
 
@@ -31,7 +30,7 @@ export async function register(req, res, next) {
     });
   } catch (error) {
     if (error?.name === 'UserExistsError') {
-      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+      return res.status(409).json({ success: false, message: EMAIL_TAKEN });
     }
     return next(error);
   }
